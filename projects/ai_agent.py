@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from datetime import datetime
 from openai import OpenAI
 from django.conf import settings
@@ -7,16 +8,7 @@ from .models import Project, Task, ChatMessage
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = getattr(settings, 'GEMINI_MODEL', 'gemini-2.5-flash')
-
-FALLBACK_MODELS = [
-    MODEL_NAME,
-    'gemini-2.5-flash',
-    'gemini-flash-latest',
-    'gemini-3.7-flash',
-    'gemini-3.8-flash',
-    'gemini-pro-latest',
-]
+MODEL_NAME = getattr(settings, 'GEMINI_MODEL', 'gemini-3-flash-preview')
 
 def _get_client():
     api_key = (
@@ -36,26 +28,24 @@ def _get_client():
 
 def _call_gemini(messages_payload, tools=None):
     client = _get_client()
-    seen = set()
-    models_to_try = [m for m in FALLBACK_MODELS if not (m in seen or seen.add(m))]
-    last_err = None
-    for model in models_to_try:
+    kwargs = {
+        "model": MODEL_NAME,
+        "messages": messages_payload,
+    }
+    if tools:
+        kwargs["tools"] = tools
+        kwargs["tool_choice"] = "auto"
+
+    max_retries = 3
+    for attempt in range(max_retries):
         try:
-            kwargs = {
-                "model": model,
-                "messages": messages_payload,
-            }
-            if tools:
-                kwargs["tools"] = tools
-                kwargs["tool_choice"] = "auto"
             return client.chat.completions.create(**kwargs)
         except Exception as e:
-            err_str = str(e).lower()
-            logger.warning(f"Model {model} failed with: {e}. Falling back to next model...")
-            last_err = e
-            continue
-    if last_err:
-        raise last_err
+            err_msg = str(e).lower()
+            if attempt < max_retries - 1 and ("503" in err_msg or "demand" in err_msg or "rate" in err_msg or "temporar" in err_msg):
+                time.sleep(1.5 * (attempt + 1))
+                continue
+            raise e
 
 # ==========================================
 # Helpers for Flexible Entity Resolution
