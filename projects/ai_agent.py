@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+import re
 from datetime import datetime
 from openai import OpenAI
 from django.conf import settings
@@ -8,7 +9,13 @@ from .models import Project, Task, ChatMessage
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = getattr(settings, 'GEMINI_MODEL', 'gemini-3-flash-preview')
+MODEL_NAME = getattr(settings, 'GEMINI_MODEL', 'gemma-4-31b-it')
+
+GEMMA_MODELS = [
+    MODEL_NAME,
+    'gemma-4-31b-it',
+    'gemma-4-26b-a4b-it',
+]
 
 def _get_client():
     api_key = (
@@ -28,24 +35,33 @@ def _get_client():
 
 def _call_gemini(messages_payload, tools=None):
     client = _get_client()
-    kwargs = {
-        "model": MODEL_NAME,
-        "messages": messages_payload,
-    }
-    if tools:
-        kwargs["tools"] = tools
-        kwargs["tool_choice"] = "auto"
+    seen = set()
+    models_to_try = [m for m in GEMMA_MODELS if not (m in seen or seen.add(m))]
+    last_err = None
 
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            return client.chat.completions.create(**kwargs)
-        except Exception as e:
-            err_msg = str(e).lower()
-            if attempt < max_retries - 1 and ("503" in err_msg or "demand" in err_msg or "rate" in err_msg or "temporar" in err_msg):
-                time.sleep(1.5 * (attempt + 1))
-                continue
-            raise e
+    for model in models_to_try:
+        kwargs = {
+            "model": model,
+            "messages": messages_payload,
+        }
+        if tools:
+            kwargs["tools"] = tools
+            kwargs["tool_choice"] = "auto"
+
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                return client.chat.completions.create(**kwargs)
+            except Exception as e:
+                err_msg = str(e).lower()
+                last_err = e
+                if attempt < max_retries - 1 and ("503" in err_msg or "demand" in err_msg or "rate" in err_msg or "temporar" in err_msg):
+                    time.sleep(1.5 * (attempt + 1))
+                    continue
+                break
+
+    if last_err:
+        raise last_err
 
 # ==========================================
 # Helpers for Flexible Entity Resolution
@@ -389,7 +405,8 @@ def run_agent_turn(user, user_prompt: str) -> tuple[str, bool]:
             response_msg = response.choices[0].message
 
             if not response_msg.tool_calls:
-                final_reply = response_msg.content or "Completed."
+                raw_reply = response_msg.content or "Completed."
+                final_reply = re.sub(r'<thought>.*?</thought>', '', raw_reply, flags=re.DOTALL).strip() or raw_reply
                 ChatMessage.objects.create(user=user, role=ChatMessage.Role.ASSISTANT, content=final_reply)
                 return final_reply, did_mutate
 
