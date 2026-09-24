@@ -1,10 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login
+from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import HttpResponse
+from django.contrib import messages
 from .models import Project, Task, ChatMessage
-from .forms import RegisterForm
+from .forms import RegisterForm, ProfileForm, StyledPasswordChangeForm
 from .ai_agent import run_agent_turn
 
 def register(request):
@@ -132,3 +133,27 @@ def clear_chat(request):
     ChatMessage.objects.filter(user=request.user).delete()
     return render(request, "partials/chat_stream.html", {"chat_history": []})
 
+@login_required
+def profile_view(request):
+    if request.method == "POST":
+        form = ProfileForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Profile updated successfully!")
+            return redirect("profile")
+    else:
+        form = ProfileForm(instance=request.user)
+    return render(request, "registration/profile.html", {"form": form})
+
+@login_required
+def change_password(request):
+    if request.method == "POST":
+        form = StyledPasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, "Password changed successfully!")
+            return redirect("profile")
+    else:
+        form = StyledPasswordChangeForm(request.user)
+    return render(request, "registration/change_password.html", {"form": form})

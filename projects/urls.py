@@ -7,7 +7,11 @@ urlpatterns = [
     path('register/', views.register, name='register'),
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
-    
+
+    # Profile & Password
+    path('profile/', views.profile_view, name='profile'),
+    path('profile/change-password/', views.change_password, name='change_password'),
+
     # HTMX Partials & Actions
     path('tasks/create/', views.create_task, name='create_task'),
     path('tasks/<int:task_id>/toggle/', views.toggle_task, name='toggle_task'),
