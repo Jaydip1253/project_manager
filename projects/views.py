@@ -1,21 +1,24 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import HttpResponse
 from .models import Project, Task, ChatMessage
+from .forms import RegisterForm
 from .ai_agent import run_agent_turn
 
 def register(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+
     if request.method == "POST":
-        form = UserCreationForm(request.POST)
+        form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             return redirect("dashboard")
     else:
-        form = UserCreationForm()
+        form = RegisterForm()
     return render(request, "registration/register.html", {"form": form})
 
 @login_required

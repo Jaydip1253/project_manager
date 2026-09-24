@@ -7,11 +7,6 @@ from .models import Project, Task, ChatMessage
 
 logger = logging.getLogger(__name__)
 
-client = OpenAI(
-    api_key=getattr(settings, 'GEMINI_API_KEY', getattr(settings, 'OPENAI_API_KEY', '')),
-    base_url=getattr(settings, 'GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai/'),
-)
-
 MODEL_NAME = getattr(settings, 'GEMINI_MODEL', 'gemini-3.6-flash')
 
 FALLBACK_MODELS = [
@@ -22,7 +17,24 @@ FALLBACK_MODELS = [
     'gemini-3.1-flash-lite',
 ]
 
+def _get_client():
+    api_key = (
+        getattr(settings, 'GEMINI_API_KEY', '') or
+        getattr(settings, 'OPENAI_API_KEY', '') or
+        os.getenv('GEMINI_API_KEY', '') or
+        os.getenv('OPENAI_API_KEY', '')
+    )
+    if not api_key:
+        raise ValueError(
+            "Missing credentials! Please add the GEMINI_API_KEY environment variable in your Render Dashboard (under Environment Variables) or in your local .env file."
+        )
+    return OpenAI(
+        api_key=api_key,
+        base_url=getattr(settings, 'GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai/'),
+    )
+
 def _call_gemini(messages_payload, tools=None):
+    client = _get_client()
     seen = set()
     models_to_try = [m for m in FALLBACK_MODELS if not (m in seen or seen.add(m))]
     last_err = None

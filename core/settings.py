@@ -86,7 +86,10 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
 LOGIN_URL = '/login/'
 
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
-GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/'
+GEMINI_API_KEY = (os.getenv('GEMINI_API_KEY') or os.getenv('OPENAI_API_KEY') or '').strip()
+GEMINI_BASE_URL = os.getenv('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai/')
 GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-3.6-flash')
 OPENAI_API_KEY = GEMINI_API_KEY
+if GEMINI_API_KEY:
+    os.environ['OPENAI_API_KEY'] = GEMINI_API_KEY
+    os.environ['GEMINI_API_KEY'] = GEMINI_API_KEY
