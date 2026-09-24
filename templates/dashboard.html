@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+  <!-- Top Bar -->
+  <header class="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/60 backdrop-blur">
+    <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+      <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Project Managament
+    </h1>
+    <div class="flex items-center gap-3">
+      <button type="button" onclick="openNewTaskModal()" class="text-xs bg-sky-600 hover:bg-sky-500 text-white font-medium px-3 py-1.5 rounded-md transition flex items-center gap-1.5 shadow-sm">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        New Task
+      </button>
+      <button type="button" onclick="openNewProjectModal()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium px-3 py-1.5 rounded-md transition flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        New Project
+      </button>
+      <button type="button" onclick="toggleAiDrawer('toggle')" class="text-xs bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-700/50 font-medium px-3 py-1.5 rounded-md transition flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+        AI Chat
+      </button>
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="text-sm px-3 py-1.5 border border-slate-700 hover:bg-slate-800 rounded-md transition text-slate-300">Logout</button>
+      </form>
+    </div>
+  </header>
+
+  <!-- Workspace Panels -->
+  <main class="flex-1 overflow-y-auto p-6 space-y-6">
+    <!-- Actionable Focus Queue -->
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xs uppercase font-bold text-slate-400 tracking-wider">Urgent Tasks</h2>
+      </div>
+      <div id="urgent-tasks" hx-get="{% url 'urgent_tasks_partial' %}" hx-trigger="projectStateChanged from:body">
+        {% include "partials/urgent_tasks.html" %}
+      </div>
+    </section>
+
+    <!-- Projects Grid -->
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xs uppercase font-bold text-slate-400 tracking-wider">Active Projects</h2>
+      </div>
+      <div id="project-board" hx-get="{% url 'project_board_partial' %}" hx-trigger="projectStateChanged from:body">
+        {% include "partials/project_board.html" %}
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Floating Button to Restore AI Chat when Minimized -->
+<div id="ai-floating-btn" class="hidden fixed bottom-6 right-6 z-40">
+  <button type="button" onclick="toggleAiDrawer('restore')" class="bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-medium px-4 py-3 rounded-full shadow-2xl flex items-center gap-2.5 border border-sky-400/30 transition transform hover:scale-105 active:scale-95">
+    <div class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></div>
+    <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+    <span class="text-xs font-semibold tracking-wide">Jaydip Chatbot</span>
+  </button>
+</div>
+
+<!-- AI Chatbot Drawer with Minimize/Maximize Controls -->
+<aside id="ai-drawer" class="w-96 border-l border-slate-800 bg-slate-900/70 backdrop-blur-md flex flex-col h-full transition-all duration-300 ease-in-out relative z-30">
+  <!-- Chat Header -->
+  <div class="p-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white flex-shrink-0 shadow-md">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+      </div>
+      <div class="min-w-0">
+        <h2 class="font-bold text-xs text-white truncate flex items-center gap-1.5">
+          Jaydip Chatbot
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        </h2>
+        <span class="text-[10px] text-slate-400">Autonomous Assistant</span>
+      </div>
+    </div>
+
+    <!-- Header Actions (Clear, Maximize/Restore, Minimize) -->
+    <div class="flex items-center gap-1">
+      <!-- Clear Chat Button -->
+      <button hx-post="{% url 'clear_chat' %}"
+              hx-target="#chat-stream"
+              hx-swap="innerHTML"
+              hx-confirm="Are you sure you want to clear conversation history?"
+              title="Clear Chat History"
+              class="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      </button>
+
+      <!-- Maximize / Restore Toggle Button -->
+      <button id="ai-maximize-btn" type="button" onclick="toggleAiDrawer('maximize')" title="Maximize / Expand Chat"
+              class="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition">
+        <svg id="ai-expand-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+        </svg>
+        <svg id="ai-compress-icon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 4v4m0 0H5m4 0L4 3m11 5h4m-4 0V4m0 4l5-5M9 20v-4m0 0H5m4 0l-5 5m11-5h4m-4 0v4m0-4l5 5" />
+        </svg>
+      </button>
+
+      <!-- Minimize Button -->
+      <button type="button" onclick="toggleAiDrawer('minimize')" title="Minimize Chat"
+              class="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages History Stream -->
+  <div id="chat-stream" class="flex-1 overflow-y-auto p-4 space-y-4">
+    {% include "partials/chat_stream.html" %}
+  </div>
+
+  <!-- Typing / Thinking Indicator -->
+  <div id="ai-typing-indicator" class="htmx-indicator px-4 py-2 border-t border-slate-800/60 bg-slate-950/40 flex items-center gap-2">
+    <div class="flex items-center gap-1">
+      <span class="w-2 h-2 rounded-full bg-sky-400 animate-bounce" style="animation-delay: 0s"></span>
+      <span class="w-2 h-2 rounded-full bg-sky-400 animate-bounce" style="animation-delay: 0.2s"></span>
+      <span class="w-2 h-2 rounded-full bg-sky-400 animate-bounce" style="animation-delay: 0.4s"></span>
+    </div>
+    <span class="text-[11px] text-slate-400 italic">AI is thinking...</span>
+  </div>
+
+  <!-- Prompt Input Form -->
+  <div class="p-3 border-t border-slate-800 bg-slate-900/90">
+    <form id="ai-chat-form"
+          hx-post="{% url 'send_chat' %}" 
+          hx-target="#chat-stream" 
+          hx-swap="beforeend" 
+          hx-indicator="#ai-typing-indicator"
+          hx-disabled-elt="#ai-chat-submit, #ai-chat-input"
+          hx-on::after-request="this.reset(); scrollChatToBottom(); renderAllMarkdown();"
+          class="flex items-center gap-2 bg-slate-950 border border-slate-800 focus-within:border-sky-500 rounded-xl px-3 py-1.5 transition">
+      {% csrf_token %}
+      <input id="ai-chat-input" 
+             type="text" 
+             name="message" 
+             required 
+             autocomplete="off"
+             placeholder="Message AI... (e.g. Plan my product launch)" 
+             class="flex-1 bg-transparent text-xs text-slate-100 placeholder-slate-500 focus:outline-none py-1.5">
+      <button id="ai-chat-submit" type="submit" class="bg-sky-600 hover:bg-sky-500 text-white p-1.5 rounded-lg transition disabled:opacity-50">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+        </svg>
+      </button>
+    </form>
+    <div class="text-[10px] text-slate-500 text-center mt-1.5">
+      Can manage projects, tasks, and answer questions.
+    </div>
+  </div>
+</aside>
+
+<!-- Modal: New Task -->
+<div id="new-task-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+      <h3 class="font-bold text-slate-100">Add New Task</h3>
+      <button type="button" onclick="closeNewTaskModal()" class="text-slate-500 hover:text-slate-300 text-lg leading-none">&times;</button>
+    </div>
+    <form hx-post="{% url 'create_task' %}"
+          hx-swap="none"
+          hx-on::after-request="if(event.detail.successful) { this.reset(); closeNewTaskModal(); }"
+          class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 mb-1">Target Project *</label>
+        <select name="project_id" required class="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+          {% for project in projects %}
+            <option value="{{ project.id }}">{{ project.title }}</option>
+          {% empty %}
+            <option value="" disabled selected>No projects available - create a project first</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 mb-1">Task Title *</label>
+        <input type="text" name="title" required placeholder="e.g. Design homepage wireframe"
+               class="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Priority</label>
+          <select name="priority" class="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+            <option value="LOW">Low</option>
+            <option value="MEDIUM" selected>Medium</option>
+            <option value="HIGH">High</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Due Date</label>
+          <input type="date" name="due_date"
+                 class="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 mb-1">Description (Optional)</label>
+        <textarea name="description" rows="2" placeholder="Task details or acceptance criteria..."
+                  class="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+        <button type="button" onclick="closeNewTaskModal()" class="px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md transition">Cancel</button>
+        <button type="submit" class="px-4 py-2 text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white rounded-md transition">Create Task</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: New Project -->
+<div id="new-project-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+      <h3 class="font-bold text-slate-100">Create New Project</h3>
+      <button type="button" onclick="closeNewProjectModal()" class="text-slate-500 hover:text-slate-300 text-lg leading-none">&times;</button>
+    </div>
+    <form hx-post="{% url 'create_project' %}"
+          hx-swap="none"
+          hx-on::after-request="if(event.detail.successful) { this.reset(); closeNewProjectModal(); }"
+          class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 mb-1">Project Title *</label>
+        <input type="text" name="title" required placeholder="e.g. Website Redesign"
+               class="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 mb-1">Description (Optional)</label>
+        <textarea name="description" rows="3" placeholder="Goals and background..."
+                  class="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+        <button type="button" onclick="closeNewProjectModal()" class="px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md transition">Cancel</button>
+        <button type="submit" class="px-4 py-2 text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white rounded-md transition">Create Project</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Modal handlers
+  function openNewTaskModal() {
+    document.getElementById('new-task-modal').classList.remove('hidden');
+  }
+  function closeNewTaskModal() {
+    document.getElementById('new-task-modal').classList.add('hidden');
+  }
+  function openNewProjectModal() {
+    document.getElementById('new-project-modal').classList.remove('hidden');
+  }
+  function closeNewProjectModal() {
+    document.getElementById('new-project-modal').classList.add('hidden');
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeNewTaskModal();
+      closeNewProjectModal();
+    }
+  });
+
+  // AI Chatbot Drawer State (Normal, Maximized, Minimized)
+  let isMaximized = false;
+  let isMinimized = false;
+
+  function toggleAiDrawer(action) {
+    const drawer = document.getElementById('ai-drawer');
+    const floatingBtn = document.getElementById('ai-floating-btn');
+    const expandIcon = document.getElementById('ai-expand-icon');
+    const compressIcon = document.getElementById('ai-compress-icon');
+
+    if (action === 'minimize') {
+      isMinimized = true;
+      drawer.classList.add('hidden');
+      floatingBtn.classList.remove('hidden');
+    } else if (action === 'restore') {
+      isMinimized = false;
+      drawer.classList.remove('hidden');
+      floatingBtn.classList.add('hidden');
+      scrollChatToBottom();
+    } else if (action === 'maximize') {
+      if (isMinimized) {
+        toggleAiDrawer('restore');
+      }
+      isMaximized = !isMaximized;
+      if (isMaximized) {
+        drawer.classList.remove('w-96');
+        drawer.classList.add('w-full', 'md:w-[650px]', 'lg:w-[820px]');
+        expandIcon.classList.add('hidden');
+        compressIcon.classList.remove('hidden');
+      } else {
+        drawer.classList.remove('w-full', 'md:w-[650px]', 'lg:w-[820px]');
+        drawer.classList.add('w-96');
+        expandIcon.classList.remove('hidden');
+        compressIcon.classList.add('hidden');
+      }
+      scrollChatToBottom();
+    } else if (action === 'toggle') {
+      if (isMinimized) {
+        toggleAiDrawer('restore');
+      } else {
+        toggleAiDrawer('minimize');
+      }
+    }
+  }
+
+  // Suggestion chips filler
+  function submitSuggestion(prompt) {
+    const input = document.getElementById('ai-chat-input');
+    input.value = prompt;
+    document.getElementById('ai-chat-submit').click();
+  }
+
+  // Scroll to bottom of chat
+  function scrollChatToBottom() {
+    const chatStream = document.getElementById('chat-stream');
+    if (chatStream) {
+      setTimeout(() => {
+        chatStream.scrollTop = chatStream.scrollHeight;
+      }, 50);
+    }
+  }
+
+  // Render markdown for all messages
+  function renderAllMarkdown() {
+    if (!window.marked) return;
+    document.querySelectorAll('.markdown-body').forEach(el => {
+      if (!el.dataset.rendered) {
+        const raw = el.getAttribute('data-raw') || el.innerText;
+        el.innerHTML = marked.parse(raw);
+        el.dataset.rendered = "true";
+      }
+    });
+  }
+
+  // Initial setup on DOM ready
+  document.addEventListener('DOMContentLoaded', () => {
+    renderAllMarkdown();
+    scrollChatToBottom();
+  });
+
+  // HTMX hooks
+  document.body.addEventListener('htmx:afterSwap', (evt) => {
+    if (evt.detail.target && evt.detail.target.id === 'chat-stream') {
+      renderAllMarkdown();
+      scrollChatToBottom();
+    }
+  });
+</script>
+{% endblock %}

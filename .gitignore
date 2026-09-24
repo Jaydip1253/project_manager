@@ -1,0 +1,26 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Environment Variables & Secrets (CRITICAL: Never commit your API keys)
+.env
+
+# Database (Render will generate a clean SQLite DB during migration)
+*.sqlite3
+db.sqlite3
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Static files collected for production
+staticfiles/
+
+# System and IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+

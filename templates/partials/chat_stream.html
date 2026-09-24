@@ -1,0 +1,71 @@
+{% if chat_history %}
+  <div class="space-y-4">
+    {% for msg in chat_history %}
+      {% if msg.role == 'user' %}
+        <div class="flex items-start justify-end gap-2.5">
+          <div class="flex flex-col items-end max-w-[85%]">
+            <span class="text-[10px] text-slate-400 font-medium mb-1">You</span>
+            <div class="p-3 rounded-2xl rounded-tr-none bg-sky-600 text-white text-xs leading-relaxed shadow-sm">
+              {{ msg.content }}
+            </div>
+          </div>
+          <div class="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[11px] font-bold text-sky-400 flex-shrink-0">
+            U
+          </div>
+        </div>
+      {% else %}
+        <div class="flex items-start gap-2.5">
+          <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white flex-shrink-0 shadow-md">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/>
+            </svg>
+          </div>
+          <div class="flex flex-col items-start max-w-[88%]">
+            <span class="text-[10px] text-sky-400 font-medium mb-1 flex items-center gap-1">
+              Jaydip AI
+            </span>
+            <div class="p-3.5 rounded-2xl rounded-tl-none bg-slate-800/90 border border-slate-700/80 text-slate-100 text-xs leading-relaxed shadow-sm markdown-body prose prose-invert max-w-none" data-raw="{{ msg.content }}">
+              {{ msg.content|linebreaksbr }}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% else %}
+  <!-- Empty Chat Welcome & Starters -->
+  <div class="h-full flex flex-col items-center justify-center text-center p-4 my-auto space-y-4">
+    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+      <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/>
+      </svg>
+    </div>
+    <div>
+      <h4 class="text-sm font-bold text-slate-100">Jaydip AI Assistant</h4>
+      <p class="text-xs text-slate-400 mt-1 max-w-[240px]">
+        Chat with me naturally or delegate project & task creation.
+      </p>
+    </div>
+
+    <!-- Starter Prompts -->
+    <div class="w-full space-y-2 pt-2 text-left">
+      <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider text-center">Suggestions</p>
+      <button type="button" onclick="submitSuggestion('What are my high-priority tasks right now?')"
+              class="w-full text-left p-2.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 hover:border-sky-500/50 text-xs text-slate-300 hover:text-white transition flex items-center gap-2 group">
+        <span class="text-amber-400 text-sm">📋</span>
+        <span class="truncate">What are my high-priority tasks?</span>
+      </button>
+      <button type="button" onclick="submitSuggestion('Help me plan a new project with 3 key milestones.')"
+              class="w-full text-left p-2.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 hover:border-sky-500/50 text-xs text-slate-300 hover:text-white transition flex items-center gap-2 group">
+        <span class="text-sky-400 text-sm">💡</span>
+        <span class="truncate">Help me plan a new project</span>
+      </button>
+      <button type="button" onclick="submitSuggestion('Add a task: Review weekly progress and update team')"
+              class="w-full text-left p-2.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 hover:border-sky-500/50 text-xs text-slate-300 hover:text-white transition flex items-center gap-2 group">
+        <span class="text-emerald-400 text-sm">➕</span>
+        <span class="truncate">Add a task: Review weekly progress</span>
+      </button>
+    </div>
+  </div>
+{% endif %}
+

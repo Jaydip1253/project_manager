@@ -1,0 +1,29 @@
+<!-- User Message -->
+<div class="flex items-start justify-end gap-2.5">
+  <div class="flex flex-col items-end max-w-[85%]">
+    <span class="text-[10px] text-slate-400 font-medium mb-1">You</span>
+    <div class="p-3 rounded-2xl rounded-tr-none bg-sky-600 text-white text-xs leading-relaxed shadow-sm">
+      {{ user_message }}
+    </div>
+  </div>
+  <div class="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[11px] font-bold text-sky-400 flex-shrink-0">
+    U
+  </div>
+</div>
+
+<!-- Assistant Reply -->
+<div class="flex items-start gap-2.5">
+  <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white flex-shrink-0 shadow-md">
+    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/>
+    </svg>
+  </div>
+  <div class="flex flex-col items-start max-w-[88%]">
+    <span class="text-[10px] text-sky-400 font-medium mb-1 flex items-center gap-1">
+      Jaydip AI
+    </span>
+    <div class="p-3.5 rounded-2xl rounded-tl-none bg-slate-800/90 border border-slate-700/80 text-slate-100 text-xs leading-relaxed shadow-sm markdown-body prose prose-invert max-w-none" data-raw="{{ assistant_message }}">
+      {{ assistant_message|linebreaksbr }}
+    </div>
+  </div>
+</div>

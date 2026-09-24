@@ -1,0 +1,10 @@
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+  {% for task in high_priority_tasks %}
+    {% include "partials/task_item.html" with task=task %}
+  {% empty %}
+    <div class="col-span-3 border border-dashed border-slate-800 rounded-lg p-4 text-center text-slate-500 text-sm">
+      No pending high-priority tasks.
+    </div>
+  {% endfor %}
+</div>
+
