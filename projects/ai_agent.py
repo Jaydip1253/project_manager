@@ -9,12 +9,12 @@ from .models import Project, Task, ChatMessage
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = getattr(settings, 'GEMINI_MODEL', 'gemma-4-31b-it')
+MODEL_NAME = getattr(settings, 'GEMINI_MODEL', 'gemini-3.5-flash-lite')
 
 GEMMA_MODELS = [
     MODEL_NAME,
-    'gemma-4-31b-it',
-    'gemma-4-26b-a4b-it',
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
 ]
 
 def _get_client():
