@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, update_session_auth_hash
+from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import HttpResponse
@@ -29,24 +30,28 @@ def dashboard(request):
         priority=Task.Priority.HIGH, is_completed=False
     )[:6]
     chat_history = ChatMessage.objects.filter(user=request.user).exclude(role='tool').order_by('created_at')[:20]
+    users = User.objects.all().order_by('username')
 
     return render(request, "dashboard.html", {
         "projects": projects,
         "high_priority_tasks": high_priority_tasks,
-        "chat_history": chat_history
+        "chat_history": chat_history,
+        "users": users
     })
 
 @login_required
 def project_board_partial(request):
     projects = Project.objects.all().prefetch_related('tasks')
-    return render(request, "partials/project_board.html", {"projects": projects})
+    users = User.objects.all().order_by('username')
+    return render(request, "partials/project_board.html", {"projects": projects, "users": users})
 
 @login_required
 def urgent_tasks_partial(request):
     high_priority_tasks = Task.objects.filter(
         priority=Task.Priority.HIGH, is_completed=False
     )[:6]
-    return render(request, "partials/urgent_tasks.html", {"high_priority_tasks": high_priority_tasks})
+    users = User.objects.all().order_by('username')
+    return render(request, "partials/urgent_tasks.html", {"high_priority_tasks": high_priority_tasks, "users": users})
 
 @login_required
 @require_POST
@@ -56,6 +61,7 @@ def create_task(request):
     priority = request.POST.get("priority", Task.Priority.MEDIUM)
     due_date = request.POST.get("due_date", "").strip() or None
     description = request.POST.get("description", "").strip()
+    assigned_to = request.POST.get("assigned_to", "").strip()
 
     if not title or not project_id:
         return HttpResponse("Title and Project are required.", status=400)
@@ -70,10 +76,23 @@ def create_task(request):
         title=title,
         description=description,
         priority=priority,
-        due_date=due_date
+        due_date=due_date,
+        assigned_to=assigned_to
     )
 
     response = HttpResponse(status=204)
+    response['HX-Trigger'] = 'projectStateChanged'
+    return response
+
+@login_required
+@require_POST
+def assign_task(request, task_id):
+    task = get_object_or_404(Task, id=task_id)
+    assigned_to = request.POST.get("assigned_to", "").strip()
+    task.assigned_to = assigned_to
+    task.save()
+    users = User.objects.all().order_by('username')
+    response = render(request, "partials/task_item.html", {"task": task, "users": users})
     response['HX-Trigger'] = 'projectStateChanged'
     return response
 
@@ -104,7 +123,8 @@ def toggle_task(request, task_id):
     task = get_object_or_404(Task, id=task_id)
     task.is_completed = not task.is_completed
     task.save()
-    response = render(request, "partials/task_item.html", {"task": task})
+    users = User.objects.all().order_by('username')
+    response = render(request, "partials/task_item.html", {"task": task, "users": users})
     response['HX-Trigger'] = 'projectStateChanged'
     return response
 

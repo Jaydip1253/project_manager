@@ -17,9 +17,20 @@
     </div>
   </div>
   <div class="flex items-center gap-1.5 flex-shrink-0">
-    {% if task.assigned_to %}
-      <span class="text-[9px] text-sky-400 bg-sky-950/60 border border-sky-800/50 px-1.5 py-0.5 rounded">@{{ task.assigned_to }}</span>
-    {% endif %}
+    <!-- Quick Assign Employee Dropdown -->
+    <form hx-post="{% url 'assign_task' task.id %}" hx-target="#task-{{ task.id }}" hx-swap="outerHTML" class="inline-flex items-center">
+      {% csrf_token %}
+      <select name="assigned_to" onchange="this.form.requestSubmit()" 
+              title="Assign to employee"
+              class="bg-slate-900 border border-slate-800 hover:border-slate-700 text-[10px] {% if task.assigned_to %}text-sky-400 font-semibold bg-sky-950/40 border-sky-800/60{% else %}text-slate-400{% endif %} rounded px-1.5 py-0.5 focus:outline-none focus:border-sky-500 cursor-pointer transition">
+        <option value="" {% if not task.assigned_to %}selected{% endif %}>+ Assign</option>
+        {% for u in users %}
+          <option value="{{ u.username }}" {% if task.assigned_to == u.username %}selected{% endif %}>
+            @{{ u.username }}
+          </option>
+        {% endfor %}
+      </select>
+    </form>
     {% if task.priority == 'HIGH' %}
       <span class="text-[9px] font-bold tracking-widest text-rose-400 bg-rose-950/40 border border-rose-900/50 px-1.5 py-0.5 rounded">HIGH</span>
     {% elif task.priority == 'LOW' %}

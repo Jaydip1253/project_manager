@@ -15,6 +15,7 @@ urlpatterns = [
     # HTMX Partials & Actions
     path('tasks/create/', views.create_task, name='create_task'),
     path('tasks/<int:task_id>/toggle/', views.toggle_task, name='toggle_task'),
+    path('tasks/<int:task_id>/assign/', views.assign_task, name='assign_task'),
     path('tasks/<int:task_id>/delete/', views.delete_task, name='delete_task'),
     path('projects/create/', views.create_project, name='create_project'),
     path('partials/projects/', views.project_board_partial, name='project_board_partial'),
