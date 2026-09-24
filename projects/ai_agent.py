@@ -7,14 +7,15 @@ from .models import Project, Task, ChatMessage
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = getattr(settings, 'GEMINI_MODEL', 'gemini-3.6-flash')
+MODEL_NAME = getattr(settings, 'GEMINI_MODEL', 'gemini-2.5-flash')
 
 FALLBACK_MODELS = [
     MODEL_NAME,
-    'gemini-3.6-flash',
-    'gemini-3.5-flash',
+    'gemini-2.5-flash',
     'gemini-flash-latest',
-    'gemini-3.1-flash-lite',
+    'gemini-3.7-flash',
+    'gemini-3.8-flash',
+    'gemini-pro-latest',
 ]
 
 def _get_client():
@@ -50,11 +51,9 @@ def _call_gemini(messages_payload, tools=None):
             return client.chat.completions.create(**kwargs)
         except Exception as e:
             err_str = str(e).lower()
-            if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str or "rate limit" in err_str:
-                logger.warning(f"Model {model} hit rate limit/quota. Falling back to next model...")
-                last_err = e
-                continue
-            raise e
+            logger.warning(f"Model {model} failed with: {e}. Falling back to next model...")
+            last_err = e
+            continue
     if last_err:
         raise last_err
 
