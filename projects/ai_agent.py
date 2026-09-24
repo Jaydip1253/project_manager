@@ -62,36 +62,33 @@ def _call_gemini(messages_payload, tools=None):
 # Helpers for Flexible Entity Resolution
 # ==========================================
 
-def _find_project(user, project_id=None, project_title=None):
+def _find_project(user=None, project_id=None, project_title=None):
     if project_id:
         try:
-            p = Project.objects.filter(id=int(project_id), user=user).first()
+            p = Project.objects.filter(id=int(project_id)).first()
             if p:
                 return p
         except (ValueError, TypeError):
             pass
     if project_title:
         query = str(project_title).strip()
-        p = Project.objects.filter(user=user, title__iexact=query).first()
+        p = Project.objects.filter(title__iexact=query).first()
         if p:
             return p
-        p = Project.objects.filter(user=user, title__icontains=query).first()
+        p = Project.objects.filter(title__icontains=query).first()
         if p:
             return p
-    # Default fallback if user has exactly one project
-    user_projects = Project.objects.filter(user=user)
-    if user_projects.count() == 1:
-        return user_projects.first()
-    return None
+    # Fallback to first project if available
+    return Project.objects.first()
 
-def _find_task(user, task_identifier, project=None):
+def _find_task(user=None, task_identifier=None, project=None):
     if not task_identifier:
         return None
     # Check if identifier is numeric ID
     if isinstance(task_identifier, int) or (isinstance(task_identifier, str) and task_identifier.strip().isdigit()):
         try:
             tid = int(str(task_identifier).strip())
-            qs = Task.objects.filter(id=tid, project__user=user)
+            qs = Task.objects.filter(id=tid)
             if project:
                 qs = qs.filter(project=project)
             t = qs.first()
@@ -100,7 +97,7 @@ def _find_task(user, task_identifier, project=None):
         except (ValueError, TypeError):
             pass
 
-    qs = Task.objects.filter(project__user=user)
+    qs = Task.objects.all()
     if project:
         qs = qs.filter(project=project)
     
@@ -112,11 +109,11 @@ def _find_task(user, task_identifier, project=None):
     return t
 
 # ==========================================
-# Secure Tool Executions (Tenant Scoped)
+# Secure Tool Executions (Shared Team Workspace)
 # ==========================================
 
-def list_projects(user, **kwargs):
-    projects = Project.objects.filter(user=user).prefetch_related('tasks')
+def list_projects(user=None, **kwargs):
+    projects = Project.objects.all().prefetch_related('tasks')
     data = []
     for p in projects:
         data.append({
@@ -144,7 +141,7 @@ def create_project(user, title, description="", **kwargs):
     project = Project.objects.create(user=user, title=title, description=description or "")
     return json.dumps({"success": True, "project_id": project.id, "title": project.title})
 
-def delete_project(user, project_id=None, title=None, **kwargs):
+def delete_project(user=None, project_id=None, title=None, **kwargs):
     project = _find_project(user, project_id=project_id, project_title=title)
     if not project:
         return json.dumps({"error": f"Project not found (searched for id={project_id}, title='{title}')."})
@@ -159,9 +156,9 @@ def create_task(user, title, project_title=None, project_id=None, priority="MEDI
 
     project = _find_project(user, project_id=project_id, project_title=project_title)
     if not project:
-        project = Project.objects.filter(user=user).first()
+        project = Project.objects.first()
         if not project:
-            project = Project.objects.create(user=user, title="General Tasks", description="Default project created automatically.")
+            project = Project.objects.create(user=user, title="General Tasks", description="Default shared team project.")
 
     p_val = priority.upper() if priority and priority.upper() in Task.Priority.values else Task.Priority.MEDIUM
     task = Task.objects.create(
