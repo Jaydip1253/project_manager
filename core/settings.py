@@ -74,6 +74,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 CSRF_TRUSTED_ORIGINS = [
+    'https://*.pythonanywhere.com',
     'https://*.onrender.com',
     'https://*.render.com',
     'http://127.0.0.1',
